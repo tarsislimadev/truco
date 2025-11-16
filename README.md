@@ -1,4 +1,4 @@
-# truco
+# [truco]()
 
 On first screen load: a button for creating a new game.
 
