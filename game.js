@@ -17,13 +17,7 @@ export class Page extends SuperPage {
 
   onCreate() {
     super.onCreate()
-    this.setEvents()
     this.append(this.getQRCodeImage())
-  }
-
-  setEvents() {
-    this.peer.on('open', (open) => console.log('[peer] open', open, Date.now()))
-    this.peer.on('connection', (connection) => console.log('[peer] connection', connection, Date.now()))
   }
 
   getQRCodeImage(url = this.getPlayerURL()) {

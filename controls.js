@@ -16,17 +16,22 @@ export class Page extends HTML {
       console.log('[peer] open', open)
       this.conn = this.peer.connect(this.getGameId())
       this.conn.on('open', (open) => this.onPlayerConnected(open))
+      this.conn.on('data', (data) => this.onPlayerData(data))
     })
   }
 
   onPlayerConnected(open) {
     console.log('[conn] open', open, Date.now())
-    this.sendMessage({ open: true })
+    this.sendMessage('open', { open: true })
   }
 
-  sendMessage(message = {}) {
+  onPlayerData(data) {
+    console.log('[player] data', data)
+  }
+
+  sendMessage(name, message = {}) {
     const json = {
-      header: this.getMessageHeader(),
+      header: this.getMessageHeader(name),
       body: message
     }
     console.log('send message', { json })
@@ -43,12 +48,11 @@ export class Page extends HTML {
     return url.searchParams.get('game_id')
   }
 
-  getPlayerId() {
-    return 'none'
-  }
+  getPlayerId() { return this.peer._id }
 
-  getMessageHeader() {
+  getMessageHeader(name) {
     return {
+      name,
       datetime: Date.now(),
       game_id: this.getGameParam(),
       player_id: this.getPlayerId(),
