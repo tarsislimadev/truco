@@ -1,35 +1,26 @@
-import { HTML } from '../../assets/js/libs/afrontend/index.js'
-import { Peer } from '../../assets/js/libs/peerjs/index.js'
+import { HTML } from './libs/afrontend/index.js'
+import { Peer } from './libs/peerjs/index.js'
 
 export class Page extends HTML {
-  peer = new Peer() // (window.location.search.split('=').at(1))
+  peer = new Peer()
   conn = null
-  game_id = null
-  player_id = null
-
-  constructor() {
-    super()
-    const url = new URL(window.location)
-    const [game_id, player_id] = url.searchParams.get('id')?.split('_') || []
-    this.game_id = game_id
-    this.player_id = player_id
-  }
 
   onCreate() {
     super.onCreate()
     this.createConnection()
-    this.setText(`game: ${this.game_id}; player: ${this.player_id};`)
+    this.setText(`game: ${this.getGameId()}; player: ${this.getPlayerId()}`)
   }
 
   createConnection() {
-    this.peer.on('open', () => {
-      this.conn = this.peer.connect(this.game_id)
-      this.conn.on('open', () => this.onPlayerConnected())
+    this.peer.on('open', (open) => {
+      console.log('[peer] open', open)
+      this.conn = this.peer.connect(this.getGameId())
+      this.conn.on('open', (open) => this.onPlayerConnected(open))
     })
   }
 
-  onPlayerConnected() {
-    this.setText(`game: ${this.game_id}; player: ${this.player_id}; peer: ${this.peer.id}; conn: ${this.conn.connectionId}`)
+  onPlayerConnected(open) {
+    console.log('[conn] open', open, Date.now())
     this.sendMessage({ open: true })
   }
 
@@ -42,13 +33,25 @@ export class Page extends HTML {
     this.conn.send(JSON.stringify(json))
   }
 
+  getGameId() {
+    const id = this.getGameParam()
+    return ['truco2', id].join('-')
+  }
+
+  getGameParam() {
+    const url = new URL(window.location)
+    return url.searchParams.get('game_id')
+  }
+
+  getPlayerId() {
+    return 'none'
+  }
+
   getMessageHeader() {
     return {
       datetime: Date.now(),
-      game_id: this.game_id,
-      player_id: this.player_id,
-      peer_id: this.peer.id,
-      conn_id: this.conn.connectionId,
+      game_id: this.getGameParam(),
+      player_id: this.getPlayerId(),
     }
   }
 }

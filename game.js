@@ -1,96 +1,49 @@
-import { HTML, nImage, nLink } from '../../assets/js/libs/afrontend/index.js'
+import { HTML } from './libs/afrontend/index.js'
+import { ImageElement } from './elements/image.element.js'
+import { TextElement } from './elements/text.element.js'
+import { LinkElement } from './elements/link.element.js'
+import { qrcode } from './utils/functions.js'
+import { GamePeer } from './utils/peer.js'
 
-import { TextElement } from '../../assets/js/elements/text.element.js'
-
-import { createNewPeer } from '../../assets/js/utils/peer.js'
-import { qrcode } from '../../assets/js/utils/functions.js'
-
-class PlayerComponent extends HTML {
-  game_id = null
-  player_id = null
-  conn = null
-
-  qrcode = new HTML()
-
-  constructor(game_id, player_id) {
-    super()
-    this.game_id = game_id
-    this.player_id = player_id
-  }
-
+class SuperPage extends HTML {
   onCreate() {
-    this.append(new TextElement({
-      text: 'player ' + (this.player_id),
-      styles: { 'text-align': 'center' }
-    }))
-    this.qrcode.append(this.createPlayerLink(this.createUrl()))
-    this.append(this.qrcode)
-  }
-
-  createUrl() {
-    const url = new URL(window.location)
-    url.pathname = '/projects/truco2/controls.html'
-    url.searchParams.set('id', this.game_id + '_' + this.player_id)
-    return url.toString()
-  }
-
-  createPlayerLink(url) {
-    const link = new nLink()
-    link.href(url)
-    link.append(this.createPlayerQrCode(url))
-    return link
-  }
-
-  createPlayerQrCode(url) {
-    const image = new nImage()
-    image.src(qrcode(url))
-    image.setContainerStyle('width', '150px')
-    image.setContainerStyle('height', '150px')
-    image.setContainerStyle('margin', '1rem')
-    return image
-  }
-
-  setConnection(conn) {
-    this.conn = conn
-    this.qrcode.clear()
-    this.qrcode.setText('player ' + this.player_id + ' gets connection ' + conn.connectionId)
+    super.onCreate()
+    this.append(new TextElement({ text: 'Truco 2' }))
   }
 }
 
-export class Page extends HTML {
-  game_id = null
-  peer = null
-  players = []
-
-  constructor() {
-    super()
-    const url = new URL(window.location)
-    this.game_id = url.searchParams.get('id')
-  }
+export class Page extends SuperPage {
+  peer = new GamePeer(this.getGameId())
 
   onCreate() {
-    this.peer = createNewPeer('truco2', { id: this.game_id })
-    this.peer.on('connection', (conn) => this.onConnection(conn))
-    Array.from(Array(4)).map((_, player_id) => {
-      const player = new PlayerComponent(this.game_id, player_id)
-      this.players.push(player)
-    })
-    this.updatePlayers()
+    super.onCreate()
+    this.setEvents()
+    this.append(this.getQRCodeImage())
   }
 
-  onConnection(conn) {
-    conn.on('data', (data) => {
-      const message = JSON.parse(data)
-      Array.from(this.players).map((p) => {
-        const is_player_id = p.player_id == message.header.player_id
-        const is_open = message.body?.open == true
-        if (is_player_id && is_open) p.setConnection(conn)
-      })
-    })
+  setEvents() {
+    this.peer.on('open', (open) => console.log('[peer] open', open, Date.now()))
+    this.peer.on('connection', (connection) => console.log('[peer] connection', connection, Date.now()))
   }
 
-  updatePlayers() {
-    this.clear()
-    this.players.map((p) => this.append(p))
+  getQRCodeImage(url = this.getPlayerURL()) {
+    const image = new ImageElement({ src: qrcode(url) })
+    return new LinkElement({ href: url, children: [image] })
+  }
+
+  getPlayerURL(url = new URL(window.location)) {
+    url.pathname = 'controls.html'
+    url.searchParams.set('game_id', this.getGameParam())
+    return url.toString()
+  }
+
+  getGameId() {
+    const id = this.getGameParam()
+    return ['truco2', id].join('-')
+  }
+
+  getGameParam() {
+    const url = new URL(window.location)
+    return url.searchParams.get('game_id')
   }
 }
